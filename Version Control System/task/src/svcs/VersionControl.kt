@@ -10,50 +10,93 @@ $ Project: Version Control System
  * Time: 17:14
  */
 class VersionControl {
-    var username = ""
+    private var username = ""
+    private val filesIndex = mutableListOf<String>()
 
     init {
-        if (File("config.txt").exists()) {
-            username = File("config.json").readText()
+        //create directory "vcs"
+        if (!File("vcs").exists()) {
+            File("vcs").mkdir()
+        }
+
+        //add a file in vcs
+
+
+        if (File("vcs/config.txt").exists()) {
+            username = File("vcs/config.txt").readText()
+        } else {
+            File("vcs/config.txt").createNewFile()
+        }
+
+        if (File("vcs/index.txt").exists()) {
+            filesIndex.addAll(File("vcs/index.txt").readLines())
+        } else {
+            File("vcs/index.txt").createNewFile()
         }
     }
 
-    fun add() {
-        println("Add a file to the index.")
-    }
-
-    fun commit() {
+    private fun commit() {
         println("Save changes.")
     }
 
-    fun checkout() {
+    private fun checkout() {
         println("Restore a file.")
     }
 
-    fun log() {
+    private fun log() {
         println("Show commit logs.")
     }
 
-    fun config() {
-        println("Get and set a username.")
-    }
+    fun execute(args: Array<String>) {
+        val command = args[0].trim()
 
-    fun execute(input: String) {
-        val args = input.split(" ")
-        val command = args[0]
+        if (command.contains("help")) {
+            printHelp()
+            return
+        }
 
         when (command) {
-            "add" -> add()
+            "add" -> add(args)
             "commit" -> commit()
             "checkout" -> checkout()
             "log" -> log()
-            "config" -> config()
+            "config" -> config(args)
             else -> println("'$command' is not a SVCS command.")
         }
     }
 
+    private fun add(args: Array<String>) {
+        if (args.size == 1) {
+            if (filesIndex.isEmpty()) {
+                println("Add a file to the index.")
+            } else {
+                println("Tracked files:")
+                filesIndex.forEach { println(it) }
+            }
 
-    fun printHelp() {
+            return
+        }
+
+        if (args.size == 2) {
+            val file = File(args[1])
+            if (file.exists()) {
+                if (filesIndex.contains(file.name)) {
+                    println("The file '${file.name}' is already in the index.")
+                } else {
+                    filesIndex.add(file.name)
+                    File("vcs/index.txt").appendText(file.name + "\n")
+                    println("The file '${file.name}' is tracked.")
+                }
+            } else {
+                println("Can't find '${file.name}'.")
+            }
+
+            return
+        }
+    }
+
+
+    private fun printHelp() {
         println("These are SVCS commands:")
         println("config     Get and set a username.")
         println("add        Add a file to the index.")
@@ -63,21 +106,21 @@ class VersionControl {
     }
 
 
-    fun config(args: Array<String>) {
-        when (args.size) {
-            1 -> {
+    private fun config(args: Array<String>) {
+        if (args.size == 1) {
+            if (username.isNotBlank()) {
+                println("The username is $username.")
+            } else {
                 println("Please, tell me who you are.")
             }
+            return
+        }
 
-            2 -> {
-                println("The username is ${args[1]}")
-                //Store a username in config.txt
-
-            }
-
-            else -> {
-                println("Too many arguments.")
-            }
+        if (args.size == 2) {
+            username = args[1]
+            File("vcs/config.txt").writeText(username)
+            println("The username is $username.")
+            return
         }
     }
 }

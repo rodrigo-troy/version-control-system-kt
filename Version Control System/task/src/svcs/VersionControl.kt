@@ -50,7 +50,7 @@ class VersionControl {
     fun execute(args: Array<String>) {
         val command = args[0].trim()
 
-        if (command.contains("help") || args.isEmpty()) {
+        if (command.contains("help")) {
             printHelp()
             return
         }

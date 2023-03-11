@@ -2,6 +2,7 @@ package svcs
 
 import java.io.File
 
+
 /**
  * Created with IntelliJ IDEA.
 $ Project: Version Control System
@@ -11,32 +12,56 @@ $ Project: Version Control System
  */
 class VersionControl {
     private var username = ""
-    private val filesIndex = mutableListOf<String>()
+    private val filesIndex = mutableListOf<Pair<String, Int>>()
+    private val log = mutableListOf<String>()
 
     init {
-        //create directory "vcs"
-        if (!File("vcs").exists()) {
-            File("vcs").mkdir()
+        if (!File(DIRECTORY).exists()) {
+            File(DIRECTORY).mkdir()
         }
 
-        //add a file in vcs
-
-
-        if (File("vcs/config.txt").exists()) {
-            username = File("vcs/config.txt").readText()
-        } else {
-            File("vcs/config.txt").createNewFile()
+        if (!File("${DIRECTORY}/commits").exists()) {
+            File("${DIRECTORY}/commits").mkdir()
         }
 
-        if (File("vcs/index.txt").exists()) {
-            filesIndex.addAll(File("vcs/index.txt").readLines())
+        if (File("${DIRECTORY}/log.txt").exists()) {
+            log.addAll(File("${DIRECTORY}/log.txt").readLines())
         } else {
-            File("vcs/index.txt").createNewFile()
+            File("${DIRECTORY}/log.txt").createNewFile()
+        }
+
+        if (File("${DIRECTORY}/config.txt").exists()) {
+            username = File("${DIRECTORY}/config.txt").readText().replace("\n", "")
+        } else {
+            File("${DIRECTORY}/config.txt").createNewFile()
+        }
+
+        if (File("${DIRECTORY}/index.txt").exists()) {
+            filesIndex.addAll(File("${DIRECTORY}/index.txt").readLines().map { it.split("|") }
+                .map { it[0] to it[1].toInt() })
+        } else {
+            File("${DIRECTORY}/index.txt").createNewFile()
         }
     }
 
-    private fun commit() {
-        println("Save changes.")
+    private fun commit(args: Array<String>) {
+        if (args.size == 1) {
+            println("Message was not passed.")
+            return
+        }
+
+        if (filesIndex.isEmpty()) {
+            println("Nothing to commit.")
+            return
+        }
+
+        val commit = Commit(filesIndex)
+        val uuid = commit.execute()
+        val message = args[1]
+
+        File("${DIRECTORY}/log.txt").appendText("commit $uuid|Author: $username|$message\n")
+
+        println("Changes are committed.")
     }
 
     private fun checkout() {
@@ -44,7 +69,16 @@ class VersionControl {
     }
 
     private fun log() {
-        println("Show commit logs.")
+        if (log.isEmpty()) {
+            println("No commits yet.")
+            return
+        }
+
+        log.reversed().forEach { it ->
+            println()
+            it.split("|").forEach { it1 -> println(it1) }
+            println()
+        }
     }
 
     fun execute(args: Array<String>) {
@@ -57,7 +91,7 @@ class VersionControl {
 
         when (command) {
             "add" -> add(args)
-            "commit" -> commit()
+            "commit" -> commit(args)
             "checkout" -> checkout()
             "log" -> log()
             "config" -> config(args)
@@ -80,11 +114,12 @@ class VersionControl {
         if (args.size == 2) {
             val file = File(args[1])
             if (file.exists()) {
-                if (filesIndex.contains(file.name)) {
+                if (filesIndex.map { it.first }.contains(file.name)) {
                     println("The file '${file.name}' is already in the index.")
                 } else {
-                    filesIndex.add(file.name)
-                    File("vcs/index.txt").appendText(file.name + "\n")
+                    val hashcode = file.readText().hashCode()
+                    filesIndex.add(file.name to hashcode)
+                    File("${DIRECTORY}/index.txt").appendText(file.name + "\n")
                     println("The file '${file.name}' is tracked.")
                 }
             } else {
@@ -95,7 +130,6 @@ class VersionControl {
         }
     }
 
-
     private fun printHelp() {
         println("These are SVCS commands:")
         println("config     Get and set a username.")
@@ -105,7 +139,6 @@ class VersionControl {
         println("checkout   Restore a file.")
     }
 
-
     private fun config(args: Array<String>) {
         if (args.size == 1) {
             if (username.isNotBlank()) {
@@ -113,14 +146,19 @@ class VersionControl {
             } else {
                 println("Please, tell me who you are.")
             }
+
             return
         }
 
         if (args.size == 2) {
             username = args[1]
-            File("vcs/config.txt").writeText(username)
+            File("${DIRECTORY}/config.txt").writeText(username.trim())
             println("The username is $username.")
             return
         }
+    }
+
+    companion object {
+        const val DIRECTORY = "vcs"
     }
 }

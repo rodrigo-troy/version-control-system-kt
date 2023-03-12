@@ -3,7 +3,7 @@ package svcs
 import java.io.File
 import java.util.*
 
-class Commit(private val filesIndex: MutableList<Pair<String, Int>>) {
+class Commit(private val filesIndex: MutableList<String>) {
     private val randomUUID: String = UUID.randomUUID().toString()
 
     fun execute(): String {
@@ -11,8 +11,11 @@ class Commit(private val filesIndex: MutableList<Pair<String, Int>>) {
             File("${VersionControl.DIRECTORY}/commits/$randomUUID").mkdir()
         }
 
-        for (file in filesIndex) {
-            File(file.first).copyTo(File("${VersionControl.DIRECTORY}/commits/$randomUUID/$file"))
+        for (fileName in filesIndex) {
+            val file = File(fileName)
+            file.copyTo(File("${VersionControl.DIRECTORY}/commits/$randomUUID/$fileName"))
+            val hashCode = file.readText().hashCode()
+            File("${VersionControl.DIRECTORY}/commits.txt").appendText("$fileName|$hashCode${System.lineSeparator()}")
         }
 
         return randomUUID

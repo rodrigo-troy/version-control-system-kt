@@ -5,5 +5,3 @@ s
 ds
 d
 s
-ds
-d

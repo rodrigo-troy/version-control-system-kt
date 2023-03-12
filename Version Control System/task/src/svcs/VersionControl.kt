@@ -12,7 +12,8 @@ $ Project: Version Control System
  */
 class VersionControl {
     private var username = ""
-    private val filesIndex = mutableListOf<Pair<String, Int>>()
+    private val filesIndex = mutableListOf<String>()
+    private val commitIndex = mutableSetOf<Pair<String, Int>>()
     private val log = mutableListOf<String>()
 
     init {
@@ -37,10 +38,16 @@ class VersionControl {
         }
 
         if (File("${DIRECTORY}/index.txt").exists()) {
-            filesIndex.addAll(File("${DIRECTORY}/index.txt").readLines().map { it.split("|") }
-                .map { it[0] to it[1].toInt() })
+            filesIndex.addAll(File("${DIRECTORY}/index.txt").readLines())
         } else {
             File("${DIRECTORY}/index.txt").createNewFile()
+        }
+
+        if (File("${DIRECTORY}/commits.txt").exists()) {
+            commitIndex.addAll(File("${DIRECTORY}/commits.txt").readLines().map { it.split("|") }
+                .map { it[0] to it[1].toInt() })
+        } else {
+            File("${DIRECTORY}/commits.txt").createNewFile()
         }
     }
 
@@ -50,18 +57,34 @@ class VersionControl {
             return
         }
 
+        var thereAreChanges = false
         if (filesIndex.isEmpty()) {
             println("Nothing to commit.")
             return
+        } else {
+            commitIndex.forEach {
+                val file = File(it.first)
+                if (file.readText().hashCode() != it.second) {
+                    thereAreChanges = true
+                }
+            }
         }
 
-        val commit = Commit(filesIndex)
-        val uuid = commit.execute()
-        val message = args[1]
+        if (commitIndex.isEmpty() && filesIndex.isNotEmpty()) {
+            thereAreChanges = true
+        }
 
-        File("${DIRECTORY}/log.txt").appendText("commit $uuid|Author: $username|$message\n")
+        if (thereAreChanges) {
+            val commit = Commit(filesIndex)
+            val uuid = commit.execute()
+            val message = args[1]
 
-        println("Changes are committed.")
+            File("${DIRECTORY}/log.txt").appendText("commit $uuid|Author: $username|$message${System.lineSeparator()}")
+
+            println("Changes are committed.")
+        } else {
+            println("Nothing to commit.")
+        }
     }
 
     private fun checkout() {
@@ -74,9 +97,9 @@ class VersionControl {
             return
         }
 
-        log.reversed().forEach { it ->
+        log.reversed().forEach {
             println()
-            it.split("|").forEach { it1 -> println(it1) }
+            it.split("|").forEach { println(it) }
             println()
         }
     }
@@ -114,12 +137,11 @@ class VersionControl {
         if (args.size == 2) {
             val file = File(args[1])
             if (file.exists()) {
-                if (filesIndex.map { it.first }.contains(file.name)) {
+                if (filesIndex.map { it }.contains(file.name)) {
                     println("The file '${file.name}' is already in the index.")
                 } else {
-                    val hashcode = file.readText().hashCode()
-                    filesIndex.add(file.name to hashcode)
-                    File("${DIRECTORY}/index.txt").appendText(file.name + "\n")
+                    filesIndex.add(file.name)
+                    File("${DIRECTORY}/index.txt").appendText("${file.name}${System.lineSeparator()}")
                     println("The file '${file.name}' is tracked.")
                 }
             } else {

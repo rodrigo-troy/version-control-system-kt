@@ -87,8 +87,21 @@ class VersionControl {
         }
     }
 
-    private fun checkout() {
-        println("Restore a file.")
+    private fun checkout(args: Array<String>) {
+        if (args.size == 1) {
+            println("Commit id was not passed.")
+            return
+        }
+
+        val commitId = args[1]
+        val commitDirectory = File("${DIRECTORY}/commits/$commitId")
+
+        if (commitDirectory.exists()) {
+            commitDirectory.listFiles().forEach { it.copyTo(File(it.name), true) }
+            println("Switched to commit $commitId.")
+        } else {
+            println("Commit does not exist.")
+        }
     }
 
     private fun log() {
@@ -97,7 +110,7 @@ class VersionControl {
             return
         }
 
-        log.reversed().forEach {
+        log.reversed().forEach { it ->
             println()
             it.split("|").forEach { println(it) }
             println()
@@ -115,7 +128,7 @@ class VersionControl {
         when (command) {
             "add" -> add(args)
             "commit" -> commit(args)
-            "checkout" -> checkout()
+            "checkout" -> checkout(args)
             "log" -> log()
             "config" -> config(args)
             else -> println("'$command' is not a SVCS command.")
